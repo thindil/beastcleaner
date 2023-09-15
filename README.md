@@ -1,4 +1,4 @@
-Blues is a simple shell script to find and delete stalled, not maintained by
+Beast cleaner is a simple shell script to find and delete stalled, not maintained by
 packages files on FreeBSD. The files are deleted one by one, thus it is
 possible to delete only selected ones. If you read this file on GitHub:
 **please don't send pull requests here**. All will be automatically closed.
