@@ -8,6 +8,9 @@ Any code propositions should go to the [Fossil](https://www.laeran.pl/repositori
 It is strongly recommended to create a backup or snapshot before you start
 deleting files. Also, be sure to know what you are deleting. ;)
 
+**WARNING:** This version of README.md is about the older version of the project.
+It will be updated as soon as the new version will start working.
+
 ### Dependencies
 
 To delete stalled files, you will need to run the script with root privileges.
