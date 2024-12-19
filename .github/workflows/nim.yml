@@ -1,0 +1,37 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ trunk ]
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: All tests in FreeBSD VM
+      uses: vmactions/freebsd-vm@v1
+      with:
+        usesh: true
+        prepare: |
+          sed -i '' -e 's/quarterly/latest/g' /etc/pkg/FreeBSD.conf
+          pkg install -y git nimble ca_root_nss
+        run: |
+          export PATH=$PATH:$HOME/.nimble/bin:/usr/local/nim/bin
+          git config --global --add safe.directory /home/runner/work/nish/nish
+          nimble -y debug
+          nimble install -y nimalyzer
+          nimalyzer tools/nimalyzer.cfg
+          nimble test -y
+          nimble -y release
+
+    - name: Upload the log
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+         name: nimalyzer.log
+         path: nimalyzer.log
