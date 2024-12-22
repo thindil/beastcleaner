@@ -25,7 +25,7 @@
 
 ## The main module of the program.
 
-import std/[os, parseopt]
+import std/[os, osproc, parseopt]
 import contracts
 
 proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
@@ -70,16 +70,21 @@ proc showProgramVersion() {.sideEffect, raises: [], tags: [WriteIOEffect],
       quit QuitSuccess
 
 
-proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect], contractual.} =
+proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
+    RootEffect], contractual.} =
   ## The main procedure of the program
   var options: OptParser = initOptParser(shortNoVal = {'h', 'v'}, longNoVal = @[
         "help", "version"])
-  type Setting = string
+  type
+    Setting = string
+    Actions = enum
+      show, clean
   const
     awkScript: Setting = "/tmp/beastcleaner.awk"
     pkgList: Setting = "/tmp/list1.txt"
     filesList: Setting = "/tmp/list2.txt"
     filesDiff: Setting = "/tmp/beastdiff.txt"
+  var action: Actions = show
 
   # Check the program's arguments and options
   while true:
@@ -100,7 +105,60 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect], contractual.} =
       of "clean":
         if not isAdmin():
           quit "To clean the system, please run the program as root, via su, sudo, dosu, etc."
+        action = clean
       else:
         quit "Unknown argument '" & options.key & "'. To see all available arguments, run the program with --help."
+
+  # Prepare the list of files to delete
+  # Create awk file if doesn't exist
+  if not fileExists(fileName = awkScript):
+    try:
+      writeFile(filename = awkScript, content = """$1 ~ /\/usr\/local\// {c=index($1,":");if(c==0){for(i=1;i<NF;i++){printf "%s ",$i}printf "%s\n",$i}}""")
+    except IOError:
+      quit "Can't create awk script. Reason: " & getCurrentExceptionMsg()
+  # Get the list of all files installed by all packages
+  try:
+    write(f = stdout, s = "Generating the list of all files installed by all packages ... ")
+    if execCmd(command = "pkg info --list-files -a | awk -f " & awkScript &
+        " | sort > " & pkgList) != 0:
+      quit QuitFailure
+    echo "done."
+  except IOError:
+    quit "Can't generate the list of all files installed by packages. Reason: " &
+        getCurrentExceptionMsg()
+  # Get the list of all files
+  try:
+    write(f = stdout, s = "Generating the list of all files in /usr/local ... ")
+    if execCmd(command = "find -x /usr/local -type f -or -type l 2>/dev/null | sort > " &
+        filesList) != 0:
+      quit QuitFailure
+    echo "done."
+  except IOError:
+    quit "Can't generate the list of all installed files. Reason: " &
+        getCurrentExceptionMsg()
+  # Save the difference to the file
+  try:
+    write(f = stdout, s = "Creating the list of files not managed by packages ... ")
+    if execCmd(command = "diff " & pkgList & " " & filesList &
+        " | grep '^>' | cut -d\" \" -f2- > " & filesDiff) != 0:
+      quit QuitFailure
+    echo "done."
+  except IOError:
+    quit "Can't create the list of files not managed by packages. Reason: " &
+        getCurrentExceptionMsg()
+
+  if action == show:
+    try:
+      if execCmd(command = "less " & filesDiff) != 0:
+        quit QuitFailure
+    except IOError:
+      quit "Can't show the list of files not managed by packages. Reason: " &
+          getCurrentExceptionMsg()
+  else:
+    try:
+      for line in filesDiff.lines:
+        removeFile(file = line)
+    except IOError, OSError:
+      echo "Can't remove files. Reason: " & getCurrentExceptionMsg()
 
 main()
