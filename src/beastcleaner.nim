@@ -25,7 +25,7 @@
 
 ## The main module of the program.
 
-import std/[os, osproc, parseopt]
+import std/[os, osproc, parseopt, strutils, terminal]
 import contracts
 
 proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
@@ -37,8 +37,9 @@ proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
   body:
     try:
       stdout.writeLine(x = """Available options are:
-      -h, --help    - Show this help and quit
-      -v, --version - Show the program version info
+      -h, --help      - Show this help and quit
+      -v, --version   - Show the program version info
+      -f, --fileslist - The file to which the list of not managed files will be written
 
 Available arguments are:
       clean         - Clean interactively the system""")
@@ -58,7 +59,7 @@ proc showProgramVersion() {.sideEffect, raises: [], tags: [WriteIOEffect],
   body:
     try:
       stdout.writeLine(x = """
-      Beastcleaner version: 0.1.0
+      Beastcleaner version: 0.0.1
 
       Copyright: 2024 Bartek Jasicki <thindil@laeran.pl.eu.org>
       License: 3-Clause BSD""")
@@ -83,7 +84,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     awkScript: Setting = "/tmp/beastcleaner.awk"
     pkgList: Setting = "/tmp/list1.txt"
     filesList: Setting = "/tmp/list2.txt"
-    filesDiff: Setting = "/tmp/beastdiff.txt"
+  var filesDiff: Setting = "/tmp/beastdiff.txt"
   var action: Actions = show
 
   # Check the program's arguments and options
@@ -98,6 +99,8 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
         showCommandLineHelp()
       of "v", "version":
         showProgramVersion()
+      of "f", "fileslist":
+        filesDiff = options.val
       else:
         quit "Unknown option '" & options.key & "'. To see all available options, run the program with --help."
     of cmdArgument:
@@ -156,8 +159,15 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
           getCurrentExceptionMsg()
   else:
     try:
+      var answer: char = 'n'
       for line in filesDiff.lines:
-        removeFile(file = line)
+        if answer != 'a':
+          write(f = stdout, s = "Delete file '" & line & "'? ([Y]es/[N]o/[A]ll/[C]ancel)")
+          answer = getch().toLowerAscii
+        if answer == 'c':
+          break
+        if answer in ['y', 'a']:
+          removeFile(file = line)
     except IOError, OSError:
       echo "Can't remove files. Reason: " & getCurrentExceptionMsg()
 
