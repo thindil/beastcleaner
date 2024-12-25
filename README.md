@@ -1,41 +1,46 @@
-Beast cleaner is a simple shell script to find and delete stalled, not maintained by
-packages files on FreeBSD. The files are deleted one by one, thus it is
-possible to delete only selected ones. If you read this file on GitHub:
-**please don't send pull requests here**. All will be automatically closed.
-Any code propositions should go to the [Fossil](https://www.laeran.pl/repositories/beastcleaner) repository.
+Beast cleaner is a simple console program to find and delete stalled,
+not maintained by packages files on FreeBSD. The files are deleted one by
+one, thus it is possible to delete only selected ones. If you read this file
+on GitHub: **please don't send pull requests here**. All will be automatically
+closed. Any code propositions should go to the [Fossil](https://www.laeran.pl/repositories/beastcleaner)
+repository.
 
-**WARNING:** The script is very simple and can produce false-positives results.
+**WARNING:** The program is very simple and can produce false-positives results.
 It is strongly recommended to create a backup or snapshot before you start
 deleting files. Also, be sure to know what you are deleting. ;)
 
-**WARNING:** This version of README.md is about the older version of the project.
-It will be updated as soon as the new version will start working.
+### Running dependencies
 
-### Dependencies
-
-To delete stalled files, you will need to run the script with root privileges.
+To delete stalled files, you will need to run the program with root privileges.
 They are not needed to just find the stalled files.
 
-### Installation
+### How to install
 
-Put the *beastcleaner.sh* script when anywhere it will be accessible by the
-selected user.
+#### Build from the source
 
-### Configuration
+You will need:
 
-Several options can be set in the script, mainly the paths and names of files
-created by the script. These settings are optional, by default, the script
-writes all files to */tmp* directory. If you want to change it, please open
-the script with your favorite text editor and read the first lines of it,
-where the configuration section is. There is everything explained.
+* [Nim compiler](https://nim-lang.org/install.html)
+* [Contracts](https://github.com/Udiknedormin/NimContracts)
+* [Nimalyzer](https://github.com/thindil/nimalyzer)
+* [Unittests2](https://github.com/status-im/nim-unittest2)
+
+You can install them manually or by using [Nimble](https://github.com/nim-lang/nimble).
+In that second option, type `nimble install https://github.com/thindil/beastcleaner` to
+install the program and all dependencies. Generally it is recommended to use
+`nimble release` to build the project in release (optimized) mode or
+`nimble debug` to build it in the debug mode.
 
 ### Usage
 
-* To find only the stalled files, run the script without any arguments. For
-  example: `./beastcleaner.sh`. It will print the list via `less` command.
-* If you want to delete stalled files, you have to run the script as root
-  user with argument **clean**. For example: `sudo ./beastcleaner.sh clean`.
+* To find only the stalled files, run the program without any arguments. For
+  example: `./beastcleaner`. It will print the list via `less` command.
+* If you want to delete stalled files, you have to run the program as root
+  user with argument **clean**. For example: `sudo ./beastcleaner clean`.
   You will need to confirm each deletion of a file from the list.
+* You can set the location of the file with the list of stalled files by adding
+  option `--fileslist` to the program, for example:
+  `./beastcleaner --fileslist=thelist.txt`.
 
 ### License
 
