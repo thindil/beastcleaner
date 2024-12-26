@@ -25,7 +25,7 @@
 
 ## The main module of the program.
 
-import std/[os, osproc, parseopt, strutils, terminal]
+import std/[algorithm, os, osproc, parseopt, strutils, terminal]
 import contracts
 
 proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
@@ -81,7 +81,6 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     Actions = enum
       show, clean
   const
-    awkScript: Setting = "/tmp/beastcleaner.awk"
     pkgList: Setting = "/tmp/list1.txt"
     filesList: Setting = "/tmp/list2.txt"
   var filesDiff: Setting = "/tmp/beastdiff.txt"
@@ -112,23 +111,33 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       else:
         quit "Unknown argument '" & options.key & "'. To see all available arguments, run the program with --help."
 
-  # Prepare the list of files to delete
-  # Create awk file if doesn't exist
-  if not fileExists(fileName = awkScript):
-    try:
-      writeFile(filename = awkScript, content = """$1 ~ /\/usr\/local\// {c=index($1,":");if(c==0){for(i=1;i<NF;i++){printf "%s ",$i}printf "%s\n",$i}}""")
-    except IOError:
-      quit "Can't create awk script. Reason: " & getCurrentExceptionMsg()
   # Get the list of all files installed by all packages
   try:
-    write(f = stdout, s = "Generating the list of all files installed by all packages ... ")
-    if execCmd(command = "pkg info --list-files -a | awk -f " & awkScript &
-        " | sort > " & pkgList) != 0:
-      quit QuitFailure
-    echo "done."
+    stdout.write(s = "Generating the list of all files installed by all packages ... ")
   except IOError:
-    quit "Can't generate the list of all files installed by packages. Reason: " &
-        getCurrentExceptionMsg()
+    quit "Can't show message."
+  var (output, exitCode) = try:
+      execCmdEx(command = "pkg info --list-files -a")
+    except OSError, IOError:
+      quit "Can't execute pkg command"
+  output.stripLineEnd
+  let filesListFile: File = try:
+      open(filename = pkgList, mode = fmWrite)
+    except IOError:
+      quit "Can't create file with list of all installed files"
+  var lines: seq[string] = output.splitLines
+  lines.sort(cmp = system.cmp)
+  for line in lines:
+    if line.endsWith(suffix = ':'):
+      continue
+    try:
+      filesListFile.writeLine(x = line.strip)
+    except IOError:
+      quit "Can't save data to file with list of all installed files."
+  filesListFile.close()
+  if exitCode != 0:
+    quit "Can't get the list of all files installed by packages."
+  echo "done."
   # Get the list of all files
   try:
     write(f = stdout, s = "Generating the list of all files in /usr/local ... ")
