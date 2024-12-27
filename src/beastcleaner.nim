@@ -114,6 +114,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
   # Get the list of all files installed by all packages
   try:
     stdout.write(s = "Generating the list of all files installed by all packages ... ")
+    stdout.flushFile
   except IOError:
     quit "Can't show message."
   var (output, exitCode) = try:
@@ -121,7 +122,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     except OSError, IOError:
       quit "Can't execute pkg command"
   output.stripLineEnd
-  let filesListFile: File = try:
+  let pkgListFile: File = try:
       open(filename = pkgList, mode = fmWrite)
     except IOError:
       quit "Can't create file with list of all installed files"
@@ -131,23 +132,39 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     if line.endsWith(suffix = ':'):
       continue
     try:
-      filesListFile.writeLine(x = line.strip)
+      pkgListFile.writeLine(x = line.strip)
     except IOError:
       quit "Can't save data to file with list of all installed files."
-  filesListFile.close()
+  pkgListFile.close()
   if exitCode != 0:
     quit "Can't get the list of all files installed by packages."
   echo "done."
+
   # Get the list of all files
   try:
     write(f = stdout, s = "Generating the list of all files in /usr/local ... ")
-    if execCmd(command = "find -x /usr/local -type f -or -type l 2>/dev/null | sort > " &
-        filesList) != 0:
-      quit QuitFailure
-    echo "done."
+    stdout.flushFile
   except IOError:
-    quit "Can't generate the list of all installed files. Reason: " &
-        getCurrentExceptionMsg()
+    quit "Can't show message."
+  let filesListFile: File = try:
+      open(filename = filesList, mode = fmWrite)
+    except IOError:
+      quit "Can't create file with list of all installed files"
+  var entries: seq[string]
+  try:
+    for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile, pcLinkToFile}):
+      entries.add(y = entry)
+  except OSError:
+    quit "Can't create the list of all local files."
+  entries.sort(cmp = system.cmp)
+  for entry in entries:
+    try:
+      filesListFile.writeLine(x = entry)
+    except:
+      quit "Can't save data to file with list of all local files."
+  filesListFile.close()
+  echo "done."
+
   # Save the difference to the file
   try:
     write(f = stdout, s = "Creating the list of files not managed by packages ... ")
