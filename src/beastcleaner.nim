@@ -150,7 +150,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       open(filename = filesList, mode = fmWrite)
     except IOError:
       quit "Can't create file with list of all installed files"
-  var entries: seq[string]
+  var entries: seq[string] = @[]
   try:
     for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile, pcLinkToFile}):
       entries.add(y = entry)
@@ -160,7 +160,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
   for entry in entries:
     try:
       filesListFile.writeLine(x = entry)
-    except:
+    except IOError:
       quit "Can't save data to file with list of all local files."
   filesListFile.close()
   echo "done."
