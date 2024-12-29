@@ -80,9 +80,6 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     Setting = string
     Actions = enum
       show, clean
-  const
-    pkgList: Setting = "/tmp/list1.txt"
-    filesList: Setting = "/tmp/list2.txt"
   var filesDiff: Setting = "/tmp/beastdiff.txt"
   var action: Actions = show
 
@@ -121,23 +118,18 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       execCmdEx(command = "pkg info --list-files -a")
     except OSError, IOError:
       quit "Can't execute pkg command"
-  output.stripLineEnd
-  let pkgListFile: File = try:
-      open(filename = pkgList, mode = fmWrite)
-    except IOError:
-      quit "Can't create file with list of all installed files"
-  var lines: seq[string] = output.splitLines
-  lines.sort(cmp = system.cmp)
-  for line in lines:
-    if line.endsWith(suffix = ':'):
-      continue
-    try:
-      pkgListFile.writeLine(x = line.strip)
-    except IOError:
-      quit "Can't save data to file with list of all installed files."
-  pkgListFile.close()
   if exitCode != 0:
     quit "Can't get the list of all files installed by packages."
+  output.stripLineEnd
+  var managedFiles: seq[string] = output.splitLines
+  var i = 0
+  while i < managedFiles.len:
+    if managedFiles[i].endsWith(suffix = ':'):
+      managedFiles.delete(i = i)
+    else:
+      managedFiles[i] = managedFiles[i].strip
+      i.inc
+  managedFiles.sort(cmp = system.cmp)
   echo "done."
 
   # Get the list of all files
@@ -146,35 +138,33 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     stdout.flushFile
   except IOError:
     quit "Can't show message."
-  let filesListFile: File = try:
-      open(filename = filesList, mode = fmWrite)
-    except IOError:
-      quit "Can't create file with list of all installed files"
-  var entries: seq[string] = @[]
+  var installedFiles: seq[string] = @[]
   try:
     for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile, pcLinkToFile}):
-      entries.add(y = entry)
+      installedFiles.add(y = entry)
   except OSError:
     quit "Can't create the list of all local files."
-  entries.sort(cmp = system.cmp)
-  for entry in entries:
-    try:
-      filesListFile.writeLine(x = entry)
-    except IOError:
-      quit "Can't save data to file with list of all local files."
-  filesListFile.close()
+  installedFiles.sort(cmp = system.cmp)
   echo "done."
 
   # Save the difference to the file
   try:
     write(f = stdout, s = "Creating the list of files not managed by packages ... ")
-    if execCmd(command = "diff " & pkgList & " " & filesList &
-        " | grep '^>' | cut -d\" \" -f2- > " & filesDiff) != 0:
-      quit QuitFailure
-    echo "done."
+    stdout.flushFile
   except IOError:
-    quit "Can't create the list of files not managed by packages. Reason: " &
-        getCurrentExceptionMsg()
+    quit "Can't show message."
+  let diffFile: File = try:
+      open(filename = filesDiff, mode = fmWrite)
+    except IOError:
+      quit "Can't create the output file."
+  for file in installedFiles:
+    if file notin managedFiles:
+      try:
+        diffFile.writeLine(x = file)
+      except IOError:
+        quit "Can't save non-managed file to output file."
+  diffFile.close
+  echo "done."
 
   if action == show:
     try:
