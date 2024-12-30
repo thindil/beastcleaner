@@ -25,7 +25,7 @@
 
 ## The main module of the program.
 
-import std/[algorithm, os, osproc, parseopt, strutils, terminal]
+import std/[os, osproc, parseopt, sets, strutils, terminal]
 import contracts
 
 proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
@@ -121,15 +121,15 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
   if exitCode != 0:
     quit "Can't get the list of all files installed by packages."
   output.stripLineEnd
-  var managedFiles: seq[string] = output.splitLines
-  var i = 0
-  while i < managedFiles.len:
-    if managedFiles[i].endsWith(suffix = ':'):
-      managedFiles.delete(i = i)
-    else:
-      managedFiles[i] = managedFiles[i].strip
-      i.inc
-  managedFiles.sort(cmp = system.cmp)
+  let files: seq[string] = output.splitLines
+  var managedFiles: HashSet[string] = initHashSet[string]()
+  for file in files:
+    if file.endsWith(suffix = ':'):
+      continue
+    try:
+      managedFiles.incl(key = file.strip)
+    except Exception:
+      quit "Can't count the filename hash."
   echo "done."
 
   # Get the list of all files
@@ -138,13 +138,12 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     stdout.flushFile
   except IOError:
     quit "Can't show message."
-  var installedFiles: seq[string] = @[]
+  var installedFiles: HashSet[string] = initHashSet[string]()
   try:
     for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile, pcLinkToFile}):
-      installedFiles.add(y = entry)
+      installedFiles.incl(key = entry)
   except OSError:
     quit "Can't create the list of all local files."
-  installedFiles.sort(cmp = system.cmp)
   echo "done."
 
   # Save the difference to the file
@@ -157,12 +156,12 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       open(filename = filesDiff, mode = fmWrite)
     except IOError:
       quit "Can't create the output file."
+  installedFiles = installedFiles - managedFiles
   for file in installedFiles:
-    if file notin managedFiles:
-      try:
-        diffFile.writeLine(x = file)
-      except IOError:
-        quit "Can't save non-managed file to output file."
+    try:
+      diffFile.writeLine(x = file)
+    except IOError:
+      quit "Can't save non-managed file to output file."
   diffFile.close
   echo "done."
 
