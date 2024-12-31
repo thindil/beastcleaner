@@ -25,7 +25,7 @@
 
 ## The main module of the program.
 
-import std/[os, osproc, parseopt, sets, strutils, terminal]
+import std/[algorithm, os, osproc, parseopt, sets, strutils, terminal]
 import contracts
 
 proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
@@ -140,7 +140,8 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     quit "Can't show message."
   var installedFiles: HashSet[string] = initHashSet[string]()
   try:
-    for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile, pcLinkToFile}):
+    for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile,
+        pcLinkToFile}):
       installedFiles.incl(key = entry)
   except OSError:
     quit "Can't create the list of all local files."
@@ -157,7 +158,11 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     except IOError:
       quit "Can't create the output file."
   installedFiles = installedFiles - managedFiles
+  var diffFiles: seq[string] = @[]
   for file in installedFiles:
+    diffFiles.add(y = file)
+  diffFiles.sort(cmp = system.cmp)
+  for file in diffFiles:
     try:
       diffFile.writeLine(x = file)
     except IOError:
