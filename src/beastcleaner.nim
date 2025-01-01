@@ -26,7 +26,7 @@
 ## The main module of the program.
 
 import std/[algorithm, os, osproc, parseopt, sets, strutils, terminal]
-import contracts
+import contracts, nimalyzer
 
 proc showCommandLineHelp() {.sideEffect, raises: [], tags: [WriteIOEffect],
     contractual.} =
@@ -80,8 +80,9 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
     Setting = string
     Actions = enum
       show, clean
-  var filesDiff: Setting = "/tmp/beastdiff.txt"
-  var action: Actions = show
+  var
+    filesDiff: Setting = "/tmp/beastdiff.txt"
+    action: Actions = show
 
   # Check the program's arguments and options
   while true:
@@ -157,7 +158,9 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       open(filename = filesDiff, mode = fmWrite)
     except IOError:
       quit "Can't create the output file."
+  {.ruleOff: "assignments"}
   installedFiles = installedFiles - managedFiles
+  {.ruleOn: "assignments"}
   var diffFiles: seq[string] = @[]
   for file in installedFiles:
     diffFiles.add(y = file)
