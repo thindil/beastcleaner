@@ -82,6 +82,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       show, clean
   var
     filesDiff: Setting = "/tmp/beastdiff.txt"
+    fileSet: bool = false
     action: Actions = show
 
   # Check the program's arguments and options
@@ -98,6 +99,7 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
         showProgramVersion()
       of "f", "fileslist":
         filesDiff = options.val
+        fileSet = true
       else:
         quit "Unknown option '" & options.key & "'. To see all available options, run the program with --help."
     of cmdArgument:
@@ -109,69 +111,71 @@ proc main() {.raises: [], tags: [ReadIOEffect, WriteIOEffect, ExecIOEffect,
       else:
         quit "Unknown argument '" & options.key & "'. To see all available arguments, run the program with --help."
 
-  # Get the list of all files installed by all packages
-  try:
-    stdout.write(s = "Generating the list of all files installed by all packages ... ")
-    stdout.flushFile
-  except IOError:
-    quit "Can't show message."
-  var (output, exitCode) = try:
-      execCmdEx(command = "pkg info --list-files -a")
-    except OSError, IOError:
-      quit "Can't execute pkg command"
-  if exitCode != 0:
-    quit "Can't get the list of all files installed by packages."
-  output.stripLineEnd
-  let files: seq[string] = output.splitLines
-  var managedFiles: HashSet[string] = initHashSet[string]()
-  for file in files:
-    if file.endsWith(suffix = ':'):
-      continue
+  # Create the unmaintained files list only when user doesn't provided own.
+  if not (action == clean and fileSet):
+    # Get the list of all files installed by all packages
     try:
-      managedFiles.incl(key = file.strip)
-    except Exception:
-      quit "Can't count the filename hash."
-  echo "done."
-
-  # Get the list of all files
-  try:
-    write(f = stdout, s = "Generating the list of all files in /usr/local ... ")
-    stdout.flushFile
-  except IOError:
-    quit "Can't show message."
-  var installedFiles: HashSet[string] = initHashSet[string]()
-  try:
-    for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile,
-        pcLinkToFile}):
-      installedFiles.incl(key = entry)
-  except OSError:
-    quit "Can't create the list of all local files."
-  echo "done."
-
-  # Save the difference to the file
-  try:
-    write(f = stdout, s = "Creating the list of files not managed by packages ... ")
-    stdout.flushFile
-  except IOError:
-    quit "Can't show message."
-  let diffFile: File = try:
-      open(filename = filesDiff, mode = fmWrite)
+      stdout.write(s = "Generating the list of all files installed by all packages ... ")
+      stdout.flushFile
     except IOError:
-      quit "Can't create the output file."
-  {.ruleOff: "assignments"}
-  installedFiles = installedFiles - managedFiles
-  {.ruleOn: "assignments"}
-  var diffFiles: seq[string] = @[]
-  for file in installedFiles:
-    diffFiles.add(y = file)
-  diffFiles.sort(cmp = system.cmp)
-  for file in diffFiles:
+      quit "Can't show message."
+    var (output, exitCode) = try:
+        execCmdEx(command = "pkg info --list-files -a")
+      except OSError, IOError:
+        quit "Can't execute pkg command"
+    if exitCode != 0:
+      quit "Can't get the list of all files installed by packages."
+    output.stripLineEnd
+    let files: seq[string] = output.splitLines
+    var managedFiles: HashSet[string] = initHashSet[string]()
+    for file in files:
+      if file.endsWith(suffix = ':'):
+        continue
+      try:
+        managedFiles.incl(key = file.strip)
+      except Exception:
+        quit "Can't count the filename hash."
+    echo "done."
+
+    # Get the list of all files
     try:
-      diffFile.writeLine(x = file)
+      write(f = stdout, s = "Generating the list of all files in /usr/local ... ")
+      stdout.flushFile
     except IOError:
-      quit "Can't save non-managed file to output file."
-  diffFile.close
-  echo "done."
+      quit "Can't show message."
+    var installedFiles: HashSet[string] = initHashSet[string]()
+    try:
+      for entry in walkDirRec(dir = "/usr/local", yieldFilter = {pcFile,
+          pcLinkToFile}):
+        installedFiles.incl(key = entry)
+    except OSError:
+      quit "Can't create the list of all local files."
+    echo "done."
+
+    # Save the difference to the file
+    try:
+      write(f = stdout, s = "Creating the list of files not managed by packages ... ")
+      stdout.flushFile
+    except IOError:
+      quit "Can't show message."
+    let diffFile: File = try:
+        open(filename = filesDiff, mode = fmWrite)
+      except IOError:
+        quit "Can't create the output file."
+    {.ruleOff: "assignments"}
+    installedFiles = installedFiles - managedFiles
+    {.ruleOn: "assignments"}
+    var diffFiles: seq[string] = @[]
+    for file in installedFiles:
+      diffFiles.add(y = file)
+    diffFiles.sort(cmp = system.cmp)
+    for file in diffFiles:
+      try:
+        diffFile.writeLine(x = file)
+      except IOError:
+        quit "Can't save non-managed file to output file."
+    diffFile.close
+    echo "done."
 
   if action == show:
     try:
