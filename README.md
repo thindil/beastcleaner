@@ -2,7 +2,7 @@ Beast cleaner is a simple console program to find and delete stalled,
 not maintained by packages files on FreeBSD. The files are deleted one by
 one, thus it is possible to delete only selected ones. If you read this file
 on GitHub: **please don't send pull requests here**. All will be automatically
-closed. Any code propositions should go to the [Fossil](https://www.laeran.pl/repositories/beastcleaner)
+closed. Any code propositions should go to the [Fossil](https://www.laeran.pl.eu.org/repositories/beastcleaner)
 repository.
 
 **WARNING:** The program is very simple and can produce false-positives results.
@@ -31,6 +31,8 @@ install the program and all dependencies. Generally it is recommended to use
 `nimble release` to build the project in release (optimized) mode or
 `nimble debug` to build it in the debug mode.
 
+To install *nimble* on FreeBSD, type: `pkg install nimble`.
+
 ### Usage
 
 * To find only the stalled files, run the program without any arguments. For
@@ -41,6 +43,9 @@ install the program and all dependencies. Generally it is recommended to use
 * You can set the location of the file with the list of stalled files by adding
   option `--fileslist` to the program, for example:
   `./beastcleaner --fileslist=thelist.txt`.
+* If you provide the file with the list of stalled files when deleting the
+  stalled files, via `--fileslist` option, it will be used instead of
+  generating the new one.
 
 ### License
 
