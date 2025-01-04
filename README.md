@@ -16,6 +16,12 @@ They are not needed to just find the stalled files.
 
 ### How to install
 
+#### Precompiled packages
+
+There are available binary packages for the newest stable FreeBSD 64-bit on the
+download page. If you want to use Nish on different version or architecture,
+you have to build it from the source.
+
 #### Build from the source
 
 You will need:
