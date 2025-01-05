@@ -1,4 +1,4 @@
-# Copyright © 2024 Bartek Jasicki
+# Copyright © 2024-2025 Bartek Jasicki
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,7 @@ proc showProgramVersion() {.sideEffect, raises: [], tags: [WriteIOEffect],
   body:
     try:
       stdout.writeLine(x = """
-      Beastcleaner version: 0.0.1
+      Beastcleaner version: 25.01
 
       Copyright: 2024 Bartek Jasicki <thindil@laeran.pl.eu.org>
       License: 3-Clause BSD""")

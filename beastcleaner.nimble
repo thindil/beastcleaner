@@ -2,7 +2,7 @@ import os
 
 # Package
 
-version = "0.1.0"
+version = "25.01"
 author = "Bartek thindil Jasicki"
 description = "A simple program to check and remove unmaintaned files on FreeBSD"
 license = "BSD-3-Clause"
